@@ -3,7 +3,7 @@ import time
 import random
 import hashlib
 import requests
-from .structs import GenshinUserData, GenshinShenJingLuoXuan
+from .structs import GenshinUserData, GenshinShenJingLuoXuan, DailyNote
 from .cookie_set import MiHoYoCookie
 from .settings import *
 from typing import Tuple
@@ -24,6 +24,7 @@ def md5(text):
 
 
 def DSGet(query: str):
+    # print("DSGet")
     n = salt
     i = str(int(time.time()))
     r = str(random.randint(100001, 200000))
@@ -32,12 +33,15 @@ def DSGet(query: str):
     c = md5(f"salt={n}&t={i}&r={r}&b={b}&q={q}")
     return f"{i},{r},{c}"
 
+
 def OSDSGet():
+    # print("OSDSGet")
     n = os_salt
     i = str(int(time.time()))
     r = str(random.randint(100001, 200000))
     c = md5("salt=" + n + "&t=" + i + "&r=" + r)
     return i + "," + r + "," + c
+
 
 def uid2server(uid: str) -> Tuple[str, bool]:
     ordict = {"1": "cn_gf01", "2": "cn_gf01",  # 国服
@@ -90,7 +94,9 @@ def GetInfo(Uid, ServerID, cookie: str, overseas=False):
                 "Cookie": cookie
             }
         )
+    # writeFile(req.text,'userInfo')
     return req.text
+
 
 def userAbyss(uid, ServerID: str, cookie: str, overseas=False, Schedule_type="1"):
     ck = cookie
@@ -116,7 +122,37 @@ def userAbyss(uid, ServerID: str, cookie: str, overseas=False, Schedule_type="1"
         'Referer': 'https://webstatic.mihoyo.com/'
     }
     req = requests.get(url, headers=headers)
+    # writeFile(req.text,'userAbyss')
     return req.text
+
+def dailyNote(Uid, ServerID, cookie: str, overseas=False):
+    if not overseas:
+        req = requests.get(
+                url=f"https://api-takumi.mihoyo.com/game_record/app/genshin/api/dailyNote?server={ServerID}&role_id={Uid}",
+                headers={
+                    'Accept': 'application/json, text/plain, */*',
+                    'DS': DSGet(f"role_id={Uid}&server={ServerID}"),
+                    'Origin': 'https://webstatic.mihoyo.com',
+                    'x-rpc-app_version': mhyVersion,
+                    'User-Agent': 'Mozilla/5.0 (Linux; Android 9; Unspecified Device) AppleWebKit/537.36 '
+                                '(KHTML, like Gecko) Version/4.0 Chrome/39.0.0.0 Mobile Safari/537.36 miHoYoBBS/2.2.0',
+                    'x-rpc-client_type': client_type,
+                    'Referer': 'https://webstatic.mihoyo.com/app/community-game-records/index.html?v=6',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'zh-CN,en-US;q=0.8',
+                    'X-Requested-With': 'com.mihoyo.hyperion',
+                    "Cookie": cookie
+                }
+            )
+        writeFile(req.text,'dailyNote')
+        return req.text
+
+def writeFile(text,fileName):
+    # fileName = str(int(time.time()))
+    # write = open('D:/WorkSpace/Python/'+fileName+'.json', 'w', encoding='utf-8')
+    write = open('/home/ubuntu/python/YuanShen_User_Info/'+fileName+'.json', 'w', encoding='utf-8')
+    write.write(text)
+    write.close()
 
 
 class GetUserInfo(MiHoYoCookie):
@@ -147,24 +183,28 @@ class GetUserInfo(MiHoYoCookie):
         cookies = self.get_cookie_list()
         if not cookies:
             raise LookupError("cookie列表为空, 请添加cookie")
-
+        # print(cookies)
         randint = random.randint(0, len(cookies) - 1)
+        # print(randint)
         return cookies[randint][1]
 
     def _get_user_info(self, uid: str, func_call, func_ret):
         _sever = uid2server(uid)
         _cookie = self.get_cookie()
-        getdata = json.loads(func_call(uid, _sever[0], _cookie, overseas=_sever[1]))
+        getdata = json.loads(
+            func_call(uid, _sever[0], _cookie, overseas=_sever[1]))
 
         stat = self.check_code(getdata["retcode"], cookie=_cookie)
         if not stat:
             if self.scount >= 2:
                 raise UserDataMaxRetryError("已达到最大出错次数, 请检查您的cookie")
             self.scount += 1
-            return self._get_user_info(uid, func_call, func_ret)  # 出错(cookie过期或失效)重试
+            # 出错(cookie过期或失效)重试
+            return self._get_user_info(uid, func_call, func_ret)
 
         self.scount = 0  # 重置计数
-
+        # print("-----------------------------------")
+        # print(getdata)
         return func_ret(**getdata["data"])
 
     def get_user_info(self, uid: str) -> GenshinUserData:  # 用户基础信息
@@ -182,3 +222,11 @@ class GetUserInfo(MiHoYoCookie):
         :return: GenshinShenJingLuoXuan
         """
         return self._get_user_info(uid, userAbyss, GenshinShenJingLuoXuan)
+
+    def get_user_dailyNote(self,uid:str) -> DailyNote:
+        """
+        外出派遣
+        :param uid: 原神uid
+        :return: DailyNote
+        """
+        return self._get_user_info(uid, dailyNote, DailyNote)

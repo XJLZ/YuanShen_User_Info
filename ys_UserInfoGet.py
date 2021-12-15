@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # https://github.com/Womsxd/YuanShen_User_Info
 import re
 import sys
@@ -107,12 +108,19 @@ def abyssAnalysis(aby: ysstructs.GenshinShenJingLuoXuan, udata: ysstructs.Genshi
 
 def dataAnalysis(userid: str):
     req = ys_api.GetUserInfo()
+    req.get_user_dailyNote(userid)
     data = req.get_user_info(userid)
     data_abyss = req.get_user_abyss(userid)
     abyss_info = abyssAnalysis(data_abyss, data)
-
+    # print("-----------------------------------")
+    # print(data)
+    # print("-----------------------------------")
+    # print(data_abyss)
+    # print("-----------------------------------")
+    # print(abyss_info)
     Character_Info = "人物：\n\t"
     name_length = []
+    # writeFile(data)
     Character_List = data.avatars
     for i in Character_List:
         name_length.append(calcStringLength(i.name))
@@ -228,6 +236,7 @@ def dataAnalysis(userid: str):
         Home_Info = "家园信息：\n\t" + "家园暂未开启！"
 
     return (f"{Character_Info}\r\n{Account_Info}\r\n{Prestige_Info}\r\n{ExtraArea_Info}\r\n{Home_Info}\r\n\n{abyss_info}")
+    # return (f"{Character_Info}")
 
 
 def infoQuery(uid):
@@ -257,11 +266,16 @@ def infoQuery(uid):
             return
 
         UidInfo = dataAnalysis(uid)
-        print(f"uid {uid}({_server})的信息为:\r\n" + UidInfo)
+        writeFile(f"uid {uid}({_server})的信息为:\r\n" + UidInfo)
+        # print(f"uid {uid}({_server})的信息为:\r\n" + UidInfo)
 
     else:
         print("UID长度有误！！\r\n请检查输入的UID是否为9位数！")
 
+def writeFile(text):
+    write = open('/home/ubuntu/python/YuanShen_User_Info/info.txt', 'w', encoding='utf-8')
+    write.write(text)
+    write.close()
 
 def sleep(maxSecond, queryOrder):
     sleepSec = random.randint(1, maxSecond)

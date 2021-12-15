@@ -108,3 +108,13 @@ class GenshinShenJingLuoXuan(BaseModel):
     total_star: int
     is_unlock: bool
 
+class Members(BaseModel):
+    avatar_side_icon: str
+    status: str
+    remained_time: str
+
+class DailyNote(BaseModel):
+    current_resin: int  # 原粹树脂
+    max_resin: int  # 原粹树脂总数
+    resin_recovery_time: str    # 原粹树脂完全回复时间
+    expeditions: List[Members]  # 出战次数Rank
